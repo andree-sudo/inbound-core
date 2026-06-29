@@ -1,0 +1,644 @@
+{
+  "name": "Inbound Core Eng",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemma-4-26b-a4b-it",
+          "mode": "list",
+          "cachedResultName": "models/gemma-4-26b-a4b-it"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Message: {{ $json.text }}\n"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "systemMessage": "# ROLE & CONTEXT  You are an AI Intake Assistant. Your task is to analyze incoming emails, determine their relevance, and sequentially call tools to save data into Google Sheets.  # AVAILABLE TOOLS  1. Google_Sheets_Add_Contact  Parameters:  * user_id * full_name * email * phone_number * status  2. Google_Sheets_Add_Calculation_Input  Parameters:  * category_id * input_value_1 * input_value_2 * raw_email_body  3. Google_Sheets_Get_Pricing  Parameters:  * category_id  # STAGE 1: RELEVANCE ASSESSMENT  Analyze the email content.  An email is RELEVANT if the sender:  * requests a cost estimate; * wants to order a service; * requests a consultation; * discusses a new project; * is interested in Cloud Migration; * is interested in Data Pipeline Setup; * is interested in AI Architecture Audit; * is interested in Custom Backend Development; * is interested in Legacy System Support.  An email is NOT RELEVANT if:  * it is spam; * it is a marketing email; * it is a job application or resume; * it is a personal message; * it is an automated system notification.  # STAGE 2: IF EMAIL IS NOT RELEVANT  Do not call any tools.  Return only:  \"Is Not Relevant\"  # STAGE 3: IF EMAIL IS RELEVANT  Execute the tools STRICTLY SEQUENTIALLY.  Never call two tools at the same time.  ## STEP A — SAVE CONTACT  Extract from the email:  * full_name — search in the signature, header, or email body. * email — the From field has the format \"First Last [email@domain.com](mailto:email@domain.com)\"; extract only the email address between \"<\" and \">\". * phone_number — search in the signature or email body in any format:   (+44 1234 123456, 044-123-45-67, +1 (555) 123-4567, 0671234567, etc.). Extract it without the \"+\" sign.  Rules:  * if the name is missing → \"Unknown\" * if the phone number is missing → \"Unknown\" * user_id = email (the exact address between \"<\" and \">\") * status = \"new\"  Then call Google_Sheets_Add_Contact and wait until it completes.  ## STEP B — SAVE CALCULATION INPUTS  Determine category_id:  Cloud Migration → srv_cloud_mig  Data Pipeline Setup → srv_data_eng  AI Architecture Audit → srv_ai_audit  Custom Backend Development → srv_custom_dev  Legacy System Support → srv_legacy_supp  input_value_1:  The primary numeric parameter used to estimate the project.  Examples:  * number of servers; * number of data sources; * number of systems to audit; * number of development hours; * number of support months.  If multiple numbers are found, choose the one most relevant to the requested service.  If no number is explicitly provided, make a logical assumption and use a minimum value of 1.  input_value_2:  An additional parameter that affects the estimate.  Examples:  * implementation timeline; * complexity; * priority; * project scale.  If such a parameter is not found, use:  \"standard\"  raw_email_body:  Save the complete email text without any modifications.  Then call Google_Sheets_Add_Calculation_Input and wait until it completes.  ## STEP C — GET PRICING INFO  Call Google_Sheets_Get_Pricing using the category_id determined in STEP B.  Wait until it completes.  # FINAL RESPONSE  After ALL THREE tools have completed successfully, return ONLY valid JSON with no additional text before or after:  {\"contact\":{\"user_id\":\"\",\"full_name\":\"\",\"email\":\"\",\"phone_number\":\"\",\"status\":\"\"},\"calculation_input\":{\"category_id\":\"\",\"input_value_1\":\"\",\"input_value_2\":\"\",\"raw_email_body\":\"\"},\"pricing\":{\"category_id\":\"\",\"service_name\":\"\",\"base_price\":\"\",\"currency\":\"\"}}  Populate all fields with the actual data extracted from the email and the results returned by the tools.  Do not add comments, explanations, or markdown."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -320,
+        -64
+      ],
+      "id": "c39d2119-d2c4-4639-8c52-df42921590b6",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8bf353cd-b751-4292-b562-b45aab6fa239",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "Is Not Relevant",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        -64
+      ],
+      "id": "aa655790-e287-4b1b-8c13-7686dc919b0d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1986179669,
+          "mode": "list",
+          "cachedResultName": "Аркуш3",
+          "cachedResultUrl": "YOUR_SPREADSHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "calculated_result": "={{ $json.calculated_result }}",
+            "created_at": "={{ $json.created_at }}",
+            "processing_log": "={{ $json.processing_log }}"
+          },
+          "matchingColumns": [
+            "created_at"
+          ],
+          "schema": [
+            {
+              "id": "calculated_result",
+              "displayName": "calculated_result",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "processing_log",
+              "displayName": "processing_log",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        592,
+        144
+      ],
+      "id": "c852c19e-974e-4e6e-8dca-2d61bf2128da",
+      "name": "Append or update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "folderId": "YOUR_FOLDER_ID",
+        "title": "=Proposal — {{ $json.contact.full_name }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        416,
+        -16
+      ],
+      "id": "aee431e6-d3eb-4170-84c5-23efa5c80138",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_EMAIL",
+        "subject": "Incorect message",
+        "emailType": "text",
+        "message": "=The user's email {{ $('Gmail Trigger').item.json.From }} cannot pass through automation. Please check it.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        -256
+      ],
+      "id": "0993b68f-45b4-4fcb-9ffe-94ac607c5834",
+      "name": "Send a message1",
+      "webhookId": "YOUR_WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -528,
+        -64
+      ],
+      "id": "84b5d07e-fb60-4f1e-8198-05a26a6d7293",
+      "name": "Gmail Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Аркуш1",
+          "cachedResultUrl": "YOUR_SPREADSHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('status', ``, 'string') }}",
+            "phone_number": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('phone_number', ``, 'string') }}",
+            "email": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('email', ``, 'string') }}",
+            "full_name": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('full_name', ``, 'string') }}",
+            "user_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('user_id', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "email"
+          ],
+          "schema": [
+            {
+              "id": "user_id",
+              "displayName": "user_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "full_name",
+              "displayName": "full_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "phone_number",
+              "displayName": "phone_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -448,
+        144
+      ],
+      "id": "03cf8e59-b868-4189-b8f5-4da9e7c20be5",
+      "name": "Google_Sheets_Add_Contact",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 45364827,
+          "mode": "list",
+          "cachedResultName": "Аркуш2",
+          "cachedResultUrl": "YOUR_SPREADSHEET_URL"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "category_id": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('category_id', ``, 'string') }}",
+            "input_value_1": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('input_value_1', ``, 'string') }}",
+            "input_value_2": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('input_value_2', ``, 'string') }}",
+            "raw_email_body": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('raw_email_body', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "category_id"
+          ],
+          "schema": [
+            {
+              "id": "category_id",
+              "displayName": "category_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "input_value_1",
+              "displayName": "input_value_1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "input_value_2",
+              "displayName": "input_value_2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "raw_email_body",
+              "displayName": "raw_email_body",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -320,
+        144
+      ],
+      "id": "1ede8de2-2866-4e93-aea0-eb4a4bfc2064",
+      "name": "Google_Sheets_Add_Calculation_Input",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Code in JavaScript1').first().json;\nconst docId = $('Create a document').first().json.id;\n\n// 1. Витягуємо значення з нової структури\nconst volume        = parseFloat(data.calculation_input?.input_value_1) || 0;\nconst base_price    = parseFloat(data.pricing?.base_price) || 0;\nconst min_threshold = parseFloat(data.pricing?.min_threshold) || 0;\nconst discount_rate = parseFloat(data.pricing?.discount_rate) || 0;\nconst fixed_fee     = parseFloat(data.pricing?.fixed_fee) || 0;\n\n// 2. Логіка розрахунку\nconst raw_total = volume * base_price;\nconst discount_amount = (volume >= min_threshold && min_threshold > 0)\n  ? raw_total * discount_rate\n  : 0.0;\nconst final_sum = (raw_total - discount_amount) + fixed_fee;\n\n// 3. Статус виконання\nlet processing_log = \"OK\";\nif (base_price === 0) processing_log = \"WARNING: base_price is 0\";\nif (volume === 0)     processing_log = \"WARNING: volume is 0\";\n\n// 4. Повертаємо результат\nreturn {\n  json: {\n    // Контактні дані\n    full_name:        data.contact?.full_name || \"Невідомий клієнт\",\n    client_email:     data.contact?.email || \"\",\n    phone_number:     data.contact?.phone_number || \"\",\n\n    // Дані послуги\n    service_name:     data.pricing?.service_name || \"\",\n    category_id:      data.pricing?.category_id || \"\",\n    currency:         data.pricing?.currency || \"EUR\",\n\n    // Розрахунок\n    volume:           volume,\n    base_price:       base_price,\n    discount_applied: round(discount_amount, 2),\n    final_sum:        round(final_sum, 2),\n\n    // Поля для Аркуш3\n    calculated_result: round(final_sum, 2),\n    created_at:        new Date().toISOString(),\n    processing_log:    processing_log,\n\n    //ID текстового документа\n    doc_id: docId,\n  }\n};\n\nfunction round(val, decimals) {\n  return Math.round(val * 10**decimals) / 10**decimals;\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        144
+      ],
+      "id": "0c84ba77-48e5-4802-a060-ff203f075f9c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Create a document').item.json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=# BUSINESS PROPOSAL\n\n**Client:** {{ $('Code in JavaScript1').item.json.contact.full_name }}\n\n**Email:** {{ $('Code in JavaScript1').item.json.contact.email }}\n\n**Phone Number:** {{ \"+\" + $('If').item.json.contact.phone_number }}\n\n**Service:** {{ $('Code in JavaScript1').item.json.pricing.service_name }}\n\n**Request:** {{ $('Code in JavaScript1').item.json.calculation_input.raw_email_body }}\n\n**Base Price:** {{ $('Code in JavaScript1').item.json.pricing.base_price }} {{ $('Code in JavaScript1').item.json.pricing.currency }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -16
+      ],
+      "id": "696e3dfb-49f7-4ef9-af9a-86bed2f59930",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Code in JavaScript').item.json.doc_id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=\n**FINAL AMOUNT DUE:** {{ $json.calculated_result }}\n\n**Calculation Date:** {{ $json.created_at }}\n"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        800,
+        144
+      ],
+      "id": "cbc79163-f9f8-43f5-ac08-0c71fcfcf154",
+      "name": "Update a document1",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Docs account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Аркуш1",
+          "cachedResultUrl": "YOUR_SPREADSHEET_URL"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        -208,
+        144
+      ],
+      "id": "b6e0b98c-c5a6-4205-b63b-eb9e35e521ac",
+      "name": "Google_Sheets_Get_Pricing",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const parts = $input.item.json.content.parts;\nconst lastPart = parts[parts.length - 1].text;\nconst clean = lastPart.replace(/```json|```/g, '').trim();\n\n// Якщо лист нерелевантний — передаємо далі без парсингу\nif (clean === \"Is Not Relevant\") {\n  return { json: { relevant: false, message: \"Is Not Relevant\" } };\n}\n\nconst parsed = JSON.parse(clean);\nreturn { json: { relevant: true, ...parsed } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -64
+      ],
+      "id": "97bb578f-1d5b-4886-865a-8e1aa42789b4",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update a document1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google_Sheets_Add_Contact": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google_Sheets_Add_Calculation_Input": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google_Sheets_Get_Pricing": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "232f133e-366d-40b3-9be6-8fa5220c6774",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  },
+  "id": "XB3nWwOePCM94zW7",
+  "tags": []
+}
